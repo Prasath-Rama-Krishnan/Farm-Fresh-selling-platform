@@ -7,9 +7,9 @@ const Producer = () => {
     const [number, setNumber] = useState('');
     const [address, setAddress] = useState('');
     const [variety, setVariety] = useState('');
-    const [quantity, setQuantity] = useState('');
     const [todoList, setTodoList] = useState([]);
 
+    // Fetch the producer list
     useEffect(() => {
         fetch('https://fertilizer-site-1.onrender.com/getproducer')
             .then((res) => res.json())
@@ -17,14 +17,14 @@ const Producer = () => {
             .catch((err) => console.error('Error fetching producers:', err));
     }, []);
 
-    
+    // Add a new producer
     async function handleAddToList() {
         if (!name || !number || !address || !variety) {
             alert('Please fill in all fields!');
             return;
         }
 
-        const newEntry = { name, number, address, variety,quantity };
+        const newEntry = { name, number, address, variety };
 
         try {
             const response = await fetch('https://fertilizer-site-1.onrender.com/producer', {
@@ -98,12 +98,6 @@ const Producer = () => {
                         placeholder="Enter your address"
                         onChange={(e) => setAddress(e.target.value)}
                     /><br />
-                     <input
-                        type="number"
-                        value={quantity}
-                        placeholder="Enter your number of quatity"
-                        onChange={(e) => setQuantity(e.target.value)}
-                    /><br />
                     <select
                         value={variety}
                         onChange={(e) => setVariety(e.target.value)}
@@ -132,7 +126,6 @@ const Producer = () => {
                                     <span>Number:</span> {item.number} <br />
                                     <span>Address:</span> {item.address} <br />
                                     <span>Variety:</span> {item.variety} <br />
-                                    <span>Quantity:</span> {item.quantity} <br />
                                 </p>
                                 <button
                                     onClick={() => handleDelete(item._id)}

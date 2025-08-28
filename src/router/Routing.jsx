@@ -8,7 +8,7 @@ import Contact from "../Contact.jsx"
 import Producer from '../Producer.jsx';
 import Consumer from '../Consumer.jsx';
 import About from '../About.jsx';
-import Instruction from '../Intruction.jsx';
+import Instruction from '../Instruction.jsx';
 function Routing() {
   return (
     <Router>
@@ -21,8 +21,7 @@ function Routing() {
         <Route path="/producer" element={<Producer/>} />
         <Route path="/consumer" element={<Consumer/>} />
         <Route path="/about" element={<About/>} />
-        <Route path="/instruction" element={<Instruction/>} />
-
+        <Route path='/instruction' element={<Instruction/>}/>
       </Routes>
     </Router>
   );

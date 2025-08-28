@@ -1,0 +1,18 @@
+cd backend(filename)
+npm init -y
+npm instal express mongoose cors
+ 
+
+now create a file index.js
+const express  =require('express');
+const cors=required('cors');
+const app=express();
+app.use(cors());
+const port=4000;
+app.listen(port,()=>{
+console.log(`server port ${port}`};
+
+terminal auto run: npm install nodemon then change package.json inside script inside add "dev":"nodemon index.js"
+ 
+ npm run dev to run the program easily
+

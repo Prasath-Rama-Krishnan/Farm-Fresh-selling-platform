@@ -1,0 +1,5 @@
+form fertilizer project
+//in backend
+ npm i express mongoose cors nodemon 
+ npm i body-parser
+

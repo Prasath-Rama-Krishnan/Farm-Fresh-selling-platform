@@ -21,10 +21,6 @@ const producerSchema = new mongoose.Schema({
     variety: {
         type: String,
         required: true,
-    },
-    quantity: {
-        type: String,
-        required: true,
     }
 });
 
