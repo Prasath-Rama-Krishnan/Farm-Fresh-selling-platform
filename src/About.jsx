@@ -1,9 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import './About.css';
+import Header from "./Header.jsx";
 
 const About=()=>{
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
 return(<>
+    <Header />
     <div>
         <div className="about-containers">
      <div className="about-page">  <h1>About us</h1></div> 

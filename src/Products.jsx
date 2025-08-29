@@ -1,32 +1,21 @@
 import React, { useState, useEffect } from "react";
 import Header from "./Header.jsx";
 import "./Consumer.css";
-import { useAuth } from './context/AuthContext';
 
-const Consumer = () => {
-  const { user } = useAuth();
+const Products = () => {
   const [todoList, setTodoList] = useState([]);
   const [searchAddress, setSearchAddress] = useState("");
   const [searchItem, setSearchItem] = useState("");
 
-
   useEffect(() => {
-    if (user) {
-      // Fetch only current user's products with token authentication
-      const userId = user.id || user.email;
-      const token = localStorage.getItem('authToken');
-      fetch(`http://localhost:5172/getproducer/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
+    // Fetch all products from all producers
+    fetch("http://localhost:5172/getproducer")
+      .then((res) => res.json())
+      .then((data) => {
+        setTodoList(data);
       })
-        .then((res) => res.json())
-        .then((data) => {
-          setTodoList(data);
-        })
-        .catch((err) => console.error("Error fetching user products:", err));
-    }
-  }, [user]);
+      .catch((err) => console.error("Error fetching products:", err));
+  }, []);
 
   // Filtered todoList based on search
   const filteredTodoList = todoList.filter(
@@ -39,7 +28,6 @@ const Consumer = () => {
     <div>
       <Header />
       <div className="product-input">
-    
         <div className="search-todo">
           <input
             type="search"
@@ -50,7 +38,6 @@ const Consumer = () => {
           />
         </div>
 
-        
         <div className="search-todo">
           <input
             type="search"
@@ -62,28 +49,27 @@ const Consumer = () => {
         </div>
       </div>
 
-      
       <div className="todo-list">
-        <h3>My Products</h3>
+        <h3>Buy Products</h3>
         {filteredTodoList.length > 0 ? (
           <div className="todo-container">
             {filteredTodoList.map((item) => (
               <div key={item._id} style={{ marginBottom: "10px" }} className="items">
                 <p>
-                  <span>Name:</span> {item.name} <br />
-                  <span>Number:</span> {item.number} <br />
-                  <span>Address:</span> {item.address} <br />
-                  <span>Variety:</span> {item.variety} <br />
+                  <span>Producer:</span> {item.name} <br />
+                  <span>Contact:</span> {item.number} <br />
+                  <span>Location:</span> {item.address} <br />
+                  <span>Product:</span> {item.variety} <br />
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p>No items found for your search.</p>
+          <p>No products found for your search.</p>
         )}
       </div>
     </div>
   );
 };
 
-export default Consumer;
+export default Products;

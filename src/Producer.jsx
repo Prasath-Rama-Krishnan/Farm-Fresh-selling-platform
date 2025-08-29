@@ -1,51 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import Header from "./Header.jsx";
 import "./Consumer.css";
+import { useAuth } from './context/AuthContext';
 
 const Producer = () => {
+    const { user } = useAuth();
     const [name, setName] = useState('');
     const [number, setNumber] = useState('');
     const [address, setAddress] = useState('');
     const [variety, setVariety] = useState('');
-    const [todoList, setTodoList] = useState([]);
-
-    // Fetch the producer list
-    useEffect(() => {
-        fetch('https://fertilizer-site-1.onrender.com/getproducer')
-            .then((res) => res.json())
-            .then((data) => setTodoList(data))
-            .catch((err) => console.error('Error fetching producers:', err));
-    }, []);
+    const [productName, setProductName] = useState('');
+    const [price, setPrice] = useState('');
+    const [quantity, setQuantity] = useState('');
+    const [description, setDescription] = useState('');
 
     // Add a new producer
     async function handleAddToList() {
-        if (!name || !number || !address || !variety) {
-            alert('Please fill in all fields!');
+        if (!name || !number || !address || !variety || !productName || !price || !quantity) {
+            alert('Please fill in all required fields!');
             return;
         }
 
-        const newEntry = { name, number, address, variety };
+        const newEntry = { 
+            name, 
+            number, 
+            address, 
+            variety,
+            productName,
+            price,
+            quantity,
+            description,
+            userId: user.id || user.email,
+            userEmail: user.email 
+        };
 
         try {
-            const response = await fetch('https://fertilizer-site-1.onrender.com/producer', {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('http://localhost:5172/producer', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(newEntry),
             });
 
             if (response.ok) {
-                alert('Entry added successfully!');
+                alert('Product added successfully!');
                 setName('');
                 setNumber('');
                 setAddress('');
                 setVariety('');
-                
-                fetch('https://fertilizer-site-1.onrender.com/getproducer')
-                    .then((res) => res.json())
-                    .then((data) => setTodoList(data))
-                    .catch((err) => console.error('Error fetching producers:', err));
+                setProductName('');
+                setPrice('');
+                setQuantity('');
+                setDescription('');
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Failed to add entry.');
@@ -56,90 +65,98 @@ const Producer = () => {
         }
     }
 
-    
-    async function handleDelete(id) {
-        try {
-            const response = await fetch(`https://fertilizer-site-1.onrender.com/producer/${id}`, {
-                method: 'DELETE',
-            });
-
-            if (response.ok) {
-                alert('Entry deleted successfully!');
-                setTodoList((prevList) => prevList.filter((item) => item._id !== id));
-            } else {
-                alert('Failed to delete entry.');
-            }
-        } catch (err) {
-            console.error('Error deleting producer:', err);
-            alert('Failed to delete entry.');
-        }
-    }
 
     return (
         <div>
             <Header />
             <div className="crop-container">
                 <div className="add-crop">
-                    <input
-                        type="text"
-                        value={name}
-                        placeholder="Enter your name"
-                        onChange={(e) => setName(e.target.value)}
-                    /><br />
-                    <input
-                        type="number"
-                        value={number}
-                        placeholder="Enter your mobile no"
-                        onChange={(e) => setNumber(e.target.value)}
-                    /><br />
+                    <h2>Add Your Product</h2>
+                    
+                    <div className="form-grid">
+                        <div className="form-row">
+                            <input
+                                type="text"
+                                value={name}
+                                placeholder="Producer Name"
+                                onChange={(e) => setName(e.target.value)}
+                            />
+                        </div>
+                        <div className="form-row">
+                            <input
+                                type="number"
+                                value={number}
+                                placeholder="Contact Number"
+                                onChange={(e) => setNumber(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    
                     <input
                         type="text"
                         value={address}
-                        placeholder="Enter your address"
+                        placeholder="Farm Location/Address"
                         onChange={(e) => setAddress(e.target.value)}
-                    /><br />
-                    <select
-                        value={variety}
-                        onChange={(e) => setVariety(e.target.value)}
-                    >
-                        <option value="">Select variety</option>
-                        <option value="samba">samba</option>
-                        <option value="karumbu">karumbu</option>
-                        <option value="nelu">nelu</option>
-                        <option value="ulundhu">ulundhu</option>
-                        <option value="ellu">ellu</option>
-                        <option value="kezangu">kezangu</option>
-                        <option value="kadalai">kadalai</option>
-                    </select><br />
-                    <button onClick={handleAddToList}>Add to List</button>
+                    />
+                    
+                    <div className="form-grid">
+                        <div className="form-row">
+                            <input
+                                type="text"
+                                value={productName}
+                                placeholder="Product Name (e.g., Organic Rice)"
+                                onChange={(e) => setProductName(e.target.value)}
+                            />
+                        </div>
+                        <div className="form-row">
+                            <select
+                                value={variety}
+                                onChange={(e) => setVariety(e.target.value)}
+                            >
+                                <option value="">Select Category</option>
+                                <option value="Rice">Rice</option>
+                                <option value="Sugarcane">Sugarcane</option>
+                                <option value="Paddy">Paddy</option>
+                                <option value="Pulses">Pulses</option>
+                                <option value="Sesame">Sesame</option>
+                                <option value="Tubers">Tubers</option>
+                                <option value="Groundnut">Groundnut</option>
+                                <option value="Vegetables">Vegetables</option>
+                                <option value="Fruits">Fruits</option>
+                                <option value="Spices">Spices</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="form-grid">
+                        <div className="form-row">
+                            <input
+                                type="number"
+                                value={price}
+                                placeholder="Price per kg (₹)"
+                                onChange={(e) => setPrice(e.target.value)}
+                            />
+                        </div>
+                        <div className="form-row">
+                            <input
+                                type="number"
+                                value={quantity}
+                                placeholder="Available Quantity (kg)"
+                                onChange={(e) => setQuantity(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    
+                    <textarea
+                        value={description}
+                        placeholder="Product Description (optional)"
+                        onChange={(e) => setDescription(e.target.value)}
+                    />
+                    
+                    <button onClick={handleAddToList}>Add Product to Our Store</button>
                 </div>
             </div>
 
-            <div className="todo-list">
-                <h3>Your Crops</h3>
-                {todoList.length > 0 ? (
-                    <div className="todo-container">
-                        {todoList.map((item) => (
-                            <div key={item._id} style={{ marginBottom: '10px' }} className="items">
-                                <p>
-                                    <span>Name:</span> {item.name} <br />
-                                    <span>Number:</span> {item.number} <br />
-                                    <span>Address:</span> {item.address} <br />
-                                    <span>Variety:</span> {item.variety} <br />
-                                </p>
-                                <button
-                                    onClick={() => handleDelete(item._id)}
-                                    style={{ marginTop: '5px', color: 'red' }}
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p>No items in the list yet.</p>
-                )}
-            </div>
         </div>
     );
 };

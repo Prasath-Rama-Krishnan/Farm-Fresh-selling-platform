@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { useNavigate,Link } from 'react-router-dom';
 import './auth.css';
+import { useAuth } from '../context/AuthContext';
 
 import { FaUser } from "react-icons/fa";
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
   
 
   const [emailError, setEmailError] = useState('');
@@ -41,7 +44,7 @@ function Login() {
     }
 
   
-    const resp = await fetch('https://educative-game-2.onrender.com/login', {
+    const resp = await fetch('http://localhost:5172/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,19 +58,83 @@ function Login() {
     const data = await resp.json();
 
     if (resp.ok) {
+      // Store token and create user object
+      const token = data.token;
+      localStorage.setItem('authToken', token);
+      
+      const userData = { 
+        email, 
+        id: data.userId || data._id || email,
+        name: data.name || email.split('@')[0],
+        token: token,
+        authMethods: data.authMethods || ['password']
+      };
+      login(userData);
       navigate('/'); 
 
     } else {
       console.log('Login failed');
-      setMessage(data.message);
+      if (data.needsPassword) {
+        setMessage(data.message + ' You can also register to set a password.');
+      } else {
+        setMessage(data.message || 'Invalid email or password');
+      }
     }
   }
-  const handleSuccess = (response) => {
-    console.log('Login Success:', response);
-    const userInfo = response.credential; 
-    console.log(userInfo);
-    navigate('/');
-    
+  const handleSuccess = async (response) => {
+    try {
+      const decoded = jwtDecode(response.credential || '');
+      const googleEmail = decoded?.email;
+      const googleSub = decoded?.sub;
+      const googleName = decoded?.name;
+      
+      // Send Google auth data to backend
+      const resp = await fetch('http://localhost:5172/google-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: googleEmail,
+          googleId: googleSub,
+          name: googleName
+        }),
+      });
+      
+      const data = await resp.json();
+      
+      if (resp.ok) {
+        const userData = {
+          email: googleEmail,
+          id: data.userId,
+          name: data.name,
+          authMethods: data.authMethods,
+          hasPassword: data.hasPassword
+        };
+        
+        login(userData);
+        
+        // If user doesn't have password, show option to set one
+        if (!data.hasPassword) {
+          const setPassword = window.confirm(
+            'You can set a password to login with email/password in the future. Would you like to set a password now?'
+          );
+          if (setPassword) {
+            // Redirect to password setting page or show modal
+            localStorage.setItem('tempUserForPassword', JSON.stringify(userData));
+            navigate('/set-password');
+            return;
+          }
+        }
+        
+        navigate('/');
+      } else {
+        setMessage(data.message || 'Google authentication failed');
+      }
+    } catch (e) {
+      console.error('Failed to decode Google credential:', e);
+      setMessage('Google authentication failed');
+    }
   };
 
   const handleError = () => {

@@ -55,24 +55,33 @@ function Register() {
     if (!isValid) {
       return; 
     }
-    const resp = await fetch("https://educative-game-2.onrender.com/register", {
+    const resp = await fetch("http://localhost:5172/register", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         email,
-        password,
-        confirmpassword
+        password
       }),
     })
     const data=await resp.json();
     if (resp.ok) {
-    
-      navigate('/login'); 
+      if (data.message.includes('Password added')) {
+        setMessage("Password added to your Google account! You can now login with either method.");
+      } else {
+        setMessage("Registration successful! Please login.");
+      }
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
     } else {
-      setMessage(data.message);
-      console.log("Login failed");
+      if (data.message && data.message.includes('already exists')) {
+        setMessage("Email already registered. Please go to login page to sign in.");
+      } else {
+        setMessage(data.message || "Registration failed. Please try again.");
+      }
+      console.log("Registration failed");
     }
 
  
@@ -113,7 +122,7 @@ function Register() {
           />   
            {confirmpasswordError && <p className="error-text">{confirmpasswordError}</p>} <br /><br />
      <center><div className="auth"><button type="submit" onClick={Log}>register</button></div></center>   
-     <div className="servererror"><p>{message}</p>
+     <div className="servererror"><p style={{color: message.includes('successful') ? 'green' : 'red'}}>{message}</p>
      </div>
         </form>
       

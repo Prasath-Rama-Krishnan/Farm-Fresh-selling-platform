@@ -1,8 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import './Instruction.css';
+import Header from "./Header.jsx";
 
 const Instruction=()=>{
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     return(<>
+        <Header />
         <div className="first11">
             <h1 className="first1">Welcome to Fresh Farm Products!</h1>
             <p>Welcome to your trusted platform for sourcing locally grown, farm-fresh goods. Whether you're a first-time visitor or a regular user, this guide will help you navigate and make the most of our platform.</p>
