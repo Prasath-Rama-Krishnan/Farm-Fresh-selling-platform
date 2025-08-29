@@ -1,4 +1,4 @@
-# AVFarm - Fertilizer Site
+# Farm - Fertilizer Site
 
 A platform connecting farmers and consumers directly for fresh produce sales.
 
