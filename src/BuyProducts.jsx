@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Header from "./Header.jsx";
-import "./Consumer.css";
+import axios from 'axios';
+import './Consumer.css';
+import API_BASE_URL from './config/api.js';
 import { useAuth } from './context/AuthContext';
 
 const BuyProducts = () => {
@@ -14,7 +15,7 @@ const BuyProducts = () => {
         if (user) {
             const userId = user.id || user.email;
             const token = localStorage.getItem('authToken');
-            fetch(`http://localhost:5172/getproducer/${userId}`, {
+            fetch(`${API_BASE_URL}/getproducer/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 }
@@ -27,7 +28,7 @@ const BuyProducts = () => {
 
     async function handleDelete(id) {
         try {
-            const response = await fetch(`http://localhost:5172/producer/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/producer/${id}`, {
                 method: 'DELETE',
             });
 
@@ -55,7 +56,7 @@ const BuyProducts = () => {
 
     async function handleSaveEdit(id) {
         try {
-            const response = await fetch(`http://localhost:5172/producer/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/producer/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,7 +71,7 @@ const BuyProducts = () => {
                 
                 // Refresh the list
                 const userId = user.id || user.email;
-                fetch(`http://localhost:5172/getproducer/${userId}`)
+                fetch(`${API_BASE_URL}/getproducer/${userId}`)
                     .then((res) => res.json())
                     .then((data) => setTodoList(data))
                     .catch((err) => console.error('Error fetching producers:', err));

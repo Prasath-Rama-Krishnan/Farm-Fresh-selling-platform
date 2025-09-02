@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Header from "./Header.jsx";
 import "./Consumer.css";
 import { useAuth } from './context/AuthContext';
+import API_BASE_URL from './config/api.js';
 
 const Producer = () => {
     const { user } = useAuth();
@@ -36,7 +37,7 @@ const Producer = () => {
 
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:5172/producer', {
+            const response = await fetch(`${API_BASE_URL}/producer`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

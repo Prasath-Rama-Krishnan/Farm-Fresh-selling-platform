@@ -4,7 +4,27 @@ const cors = require('cors');
 
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const Producer = require('./producerdb')
+const Producer = require('./producerdb');
+
+// MongoDB connection with timeout
+const connectDB = async () => {
+    try {
+        if (process.env.MONGODB_URI) {
+            await mongoose.connect(process.env.MONGODB_URI, {
+                serverSelectionTimeoutMS: 5000, // 5 second timeout
+                socketTimeoutMS: 45000,
+            });
+            console.log('MongoDB connected');
+        } else {
+            console.log('No MongoDB URI provided, using in-memory storage only');
+        }
+    } catch (error) {
+        console.error('MongoDB connection failed:', error.message);
+        // Continue without MongoDB - use in-memory storage
+    }
+};
+
+connectDB();
 
 app.use(cors());
 app.use(express.json());

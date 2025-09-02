@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import './auth.css';
 import { useAuth } from '../context/AuthContext';
+import './auth.css';
+import API_BASE_URL from '../config/api.js';
 import { FaLock } from "react-icons/fa";
 
 function SetPassword() {
@@ -55,7 +56,7 @@ function SetPassword() {
     }
 
     try {
-      const resp = await fetch('http://localhost:5172/set-password', {
+      const resp = await fetch(`${API_BASE_URL}/set-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

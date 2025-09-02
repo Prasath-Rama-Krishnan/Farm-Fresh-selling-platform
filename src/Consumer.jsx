@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import Header from "./Header.jsx";
-import "./Consumer.css";
+import React, { useState, useEffect } from 'react';
+import './Consumer.css';
 import { useAuth } from './context/AuthContext';
+import API_BASE_URL from './config/api.js';
 
 const Consumer = () => {
   const { user } = useAuth();
@@ -15,7 +15,7 @@ const Consumer = () => {
       // Fetch only current user's products with token authentication
       const userId = user.id || user.email;
       const token = localStorage.getItem('authToken');
-      fetch(`http://localhost:5172/getproducer/${userId}`, {
+      fetch(`${API_BASE_URL}/getproducer/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         }

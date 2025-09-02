@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import './Consumer.css';
+import API_BASE_URL from './config/api.js';
 import Header from "./Header.jsx";
-import "./Consumer.css";
 
 const Products = () => {
   const [todoList, setTodoList] = useState([]);
@@ -9,7 +10,7 @@ const Products = () => {
 
   useEffect(() => {
     // Fetch all products from all producers
-    fetch("http://localhost:5172/getproducer")
+    fetch(`${API_BASE_URL}/getproducer`)
       .then((res) => res.json())
       .then((data) => {
         setTodoList(data);

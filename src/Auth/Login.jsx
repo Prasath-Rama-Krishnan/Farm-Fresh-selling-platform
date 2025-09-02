@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate,Link } from 'react-router-dom';
-import './auth.css';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-
-import { FaUser } from "react-icons/fa";
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { Link, useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
-
+import './Auth.css';
+import API_BASE_URL from '../config/api.js';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -44,7 +44,7 @@ function Login() {
     }
 
   
-    const resp = await fetch('http://localhost:5172/login', {
+    const resp = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ function Login() {
       const googleName = decoded?.name;
       
       // Send Google auth data to backend
-      const resp = await fetch('http://localhost:5172/google-auth', {
+      const resp = await fetch(`${API_BASE_URL}/google-auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

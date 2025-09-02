@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import './auth.css'
-import { useNavigate ,Link} from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import './Auth.css';
+import API_BASE_URL from '../config/api.js';
 import { BiSolidUserRectangle } from "react-icons/bi";
 
 function Register() {
@@ -55,7 +56,7 @@ function Register() {
     if (!isValid) {
       return; 
     }
-    const resp = await fetch("http://localhost:5172/register", {
+    const resp = await fetch(`${API_BASE_URL}/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
