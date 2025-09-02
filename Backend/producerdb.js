@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://game:game@cluster1.xfa43.mongodb.net/produce';
+const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://prasathramakrishnan005_db_user:w2sHRgxAitPaBvoD@farm-fresh.v7dgiuo.mongodb.net/?retryWrites=true&w=majority&appName=farm-fresh';
 mongoose.connect(mongoUri)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => console.error('MongoDB connection error:', err.message));

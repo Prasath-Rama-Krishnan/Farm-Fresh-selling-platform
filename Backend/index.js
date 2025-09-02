@@ -1,32 +1,52 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const Producer = require('./producerdb');
 
-// MongoDB connection with timeout
+// JWT Secret - use environment variable or fallback
+const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key-for-development';
+
+// In-memory fallback storage for when MongoDB is unavailable
+let inMemoryProducers = [];
+
+// MongoDB connection with graceful fallback
 const connectDB = async () => {
     try {
         if (process.env.MONGODB_URI) {
             await mongoose.connect(process.env.MONGODB_URI, {
-                serverSelectionTimeoutMS: 5000, // 5 second timeout
+                serverSelectionTimeoutMS: 5000,
                 socketTimeoutMS: 45000,
             });
-            console.log('MongoDB connected');
+            console.log('✅ MongoDB Atlas connected successfully');
+            return true;
         } else {
-            console.log('No MongoDB URI provided, using in-memory storage only');
+            console.log('⚠️ No MongoDB URI - using in-memory storage');
+            return false;
         }
     } catch (error) {
-        console.error('MongoDB connection failed:', error.message);
-        // Continue without MongoDB - use in-memory storage
+        console.error('❌ MongoDB connection failed:', error.message);
+        console.log('🔄 Falling back to in-memory storage');
+        return false;
     }
 };
 
-connectDB();
+// Check if MongoDB is available
+let isMongoConnected = false;
 
-app.use(cors());
+connectDB().then(connected => {
+    isMongoConnected = connected;
+});
+
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://farm-fresh-selling-platform.vercel.app', 'https://avfarm.vercel.app']
+        : 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -100,11 +120,22 @@ app.post('/login', async(req, res) => {
     const user = findUserByEmail(email);
 
     if (user && user.password === password) {
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user.id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        
         res.status(200).json({ 
             message: 'Login successful!', 
-            userId: user.id,
-            name: user.name,
-            authMethods: user.authMethods
+            token: token,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                authMethods: user.authMethods
+            }
         });
     } else if (user && !user.password) {
         res.status(400).json({ 
@@ -136,11 +167,22 @@ app.post('/google-auth', async(req, res) => {
         user = createOrUpdateUser(email, null, googleId, name);
     }
 
-    res.status(200).json({
-        message: 'Google authentication successful!',
-        userId: user.id,
-        name: user.name,
-        authMethods: user.authMethods,
+    // Generate JWT token for Google auth
+    const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+    );
+
+    res.status(200).json({ 
+        message: 'Google authentication successful!', 
+        token: token,
+        user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            authMethods: user.authMethods
+        },
         hasPassword: !!user.password
     });
 });

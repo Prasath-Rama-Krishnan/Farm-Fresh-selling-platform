@@ -53,22 +53,24 @@ function Login() {
         email,
         password,
       }),
-      
     });
     const data = await resp.json();
-
-    if (resp.ok) {
-      // Store token and create user object
-      const token = data.token;
-      localStorage.setItem('authToken', token);
+    console.log('Login response:', data);
       
-      const userData = { 
-        email, 
-        id: data.userId || data._id || email,
+    if (resp.ok) {
+      // Store token and user data from backend response
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      
+      // Use user data from backend response
+      const userData = data.user || {
+        id: data.userId,
+        email: email,
         name: data.name || email.split('@')[0],
-        token: token,
         authMethods: data.authMethods || ['password']
       };
+      
       login(userData);
       navigate('/'); 
 
@@ -175,7 +177,7 @@ function Login() {
             <br />
             <center>
              <div className="auth"> <button type="submit" onClick={Log}>Login</button></div>
-             <GoogleOAuthProvider clientId="848508527235-cbrsoqi49lr88rfiivj0nuc2fhrgugmm.apps.googleusercontent.com">
+             <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "848508527235-cbrsoqi49lr88rfiivj0nuc2fhrgugmm.apps.googleusercontent.com"}>
       <div>
         <p>or</p>
         <GoogleLogin
