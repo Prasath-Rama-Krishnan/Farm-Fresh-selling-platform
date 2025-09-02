@@ -14,12 +14,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key-for-devel
 let inMemoryProducers = [];
 
 // MongoDB connection with graceful fallback
-const connectDB = async () => {
+const connectDB = async() => {
     try {
         if (process.env.MONGODB_URI) {
             await mongoose.connect(process.env.MONGODB_URI, {
-                serverSelectionTimeoutMS: 5000,
+                serverSelectionTimeoutMS: 10000,
                 socketTimeoutMS: 45000,
+                maxPoolSize: 10,
+                minPoolSize: 1,
             });
             console.log('✅ MongoDB Atlas connected successfully');
             return true;
@@ -41,14 +43,31 @@ connectDB().then(connected => {
     isMongoConnected = connected;
 });
 
+// CORS configuration for Vercel
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://farm-fresh-selling-platform.vercel.app', 'https://avfarm.vercel.app']
-        : 'http://localhost:5173',
-    credentials: true
+    origin: [
+        'https://farm-fresh-selling-platform.vercel.app',
+        'https://avfarm.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        message: 'API is running',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        mongoConnected: isMongoConnected
+    });
+});
 
 const port = process.env.PORT || 5172;
 
@@ -63,7 +82,7 @@ function findUserByEmail(email) {
 // Helper function to create or update user
 function createOrUpdateUser(email, password = null, googleId = null, name = null) {
     let user = findUserByEmail(email);
-    
+
     if (user) {
         // Update existing user
         if (password) user.password = password;
@@ -80,10 +99,10 @@ function createOrUpdateUser(email, password = null, googleId = null, name = null
             name: name || email.split('@')[0],
             authMethods: []
         };
-        
+
         if (password) newUser.authMethods.push('password');
         if (googleId) newUser.authMethods.push('google');
-        
+
         users.push(newUser);
         return newUser;
     }
@@ -101,9 +120,9 @@ app.post('/register', async(req, res) => {
             // User exists with Google only, add password method
             existingUser.password = password;
             existingUser.authMethods.push('password');
-            return res.status(200).json({ 
-                message: 'Password added to existing Google account!', 
-                userId: existingUser.id 
+            return res.status(200).json({
+                message: 'Password added to existing Google account!',
+                userId: existingUser.id
             });
         }
     }
@@ -121,14 +140,12 @@ app.post('/login', async(req, res) => {
 
     if (user && user.password === password) {
         // Generate JWT token
-        const token = jwt.sign(
-            { userId: user.id, email: user.email },
-            JWT_SECRET,
-            { expiresIn: '24h' }
+        const token = jwt.sign({ userId: user.id, email: user.email },
+            JWT_SECRET, { expiresIn: '24h' }
         );
-        
-        res.status(200).json({ 
-            message: 'Login successful!', 
+
+        res.status(200).json({
+            message: 'Login successful!',
             token: token,
             user: {
                 id: user.id,
@@ -138,7 +155,7 @@ app.post('/login', async(req, res) => {
             }
         });
     } else if (user && !user.password) {
-        res.status(400).json({ 
+        res.status(400).json({
             message: 'This email is registered with Google Sign-In only. Please sign in with Google or set a password.',
             needsPassword: true,
             userId: user.id
@@ -154,7 +171,7 @@ app.post('/google-auth', async(req, res) => {
 
     // Find or create user with Google authentication
     let user = findUserByEmail(email);
-    
+
     if (user) {
         // Update existing user with Google info
         if (!user.authMethods.includes('google')) {
@@ -168,14 +185,12 @@ app.post('/google-auth', async(req, res) => {
     }
 
     // Generate JWT token for Google auth
-    const token = jwt.sign(
-        { userId: user.id, email: user.email },
-        JWT_SECRET,
-        { expiresIn: '24h' }
+    const token = jwt.sign({ userId: user.id, email: user.email },
+        JWT_SECRET, { expiresIn: '24h' }
     );
 
-    res.status(200).json({ 
-        message: 'Google authentication successful!', 
+    res.status(200).json({
+        message: 'Google authentication successful!',
         token: token,
         user: {
             id: user.id,
@@ -192,7 +207,7 @@ app.post('/set-password', async(req, res) => {
     const { email, password, userId } = req.body;
 
     const user = findUserByEmail(email);
-    
+
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
     }
@@ -207,7 +222,7 @@ app.post('/set-password', async(req, res) => {
         user.authMethods.push('password');
     }
 
-    res.status(200).json({ 
+    res.status(200).json({
         message: 'Password set successfully! You can now login with either Google or password.',
         authMethods: user.authMethods
     });
@@ -216,17 +231,17 @@ app.post('/set-password', async(req, res) => {
 app.post('/producer', async(req, res) => {
     const { name, number, address, variety, productName, price, quantity, description, userId, userEmail } = req.body;
     try {
-        const newProducer = new Producer({ 
-            name, 
-            number, 
-            address, 
-            variety, 
-            productName, 
-            price, 
-            quantity, 
-            description, 
-            userId, 
-            userEmail 
+        const newProducer = new Producer({
+            name,
+            number,
+            address,
+            variety,
+            productName,
+            price,
+            quantity,
+            description,
+            userId,
+            userEmail
         });
         await newProducer.save();
         res.status(201).json({ message: 'Product saved successfully!' });
@@ -260,9 +275,7 @@ app.put('/producer/:id', async(req, res) => {
     const { productName, price, quantity, description } = req.body;
     try {
         const updatedProducer = await Producer.findByIdAndUpdate(
-            id, 
-            { productName, price, quantity, description },
-            { new: true }
+            id, { productName, price, quantity, description }, { new: true }
         );
         res.status(200).json({ message: 'Product updated successfully!', producer: updatedProducer });
     } catch (err) {
@@ -280,6 +293,19 @@ app.delete('/producer/:id', async(req, res) => {
     }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('API Error:', err);
+    res.status(500).json({
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
+    });
+});
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: 'API endpoint not found' });
+});
 
 // Export the app for Vercel
 module.exports = app;
