@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const port = 5172;
+const port = process.env.PORT || 5172;
 
 // Simple in-memory user storage (in production, use a proper database)
 const users = [];
@@ -219,6 +219,12 @@ app.delete('/producer/:id', async(req, res) => {
 });
 
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+// Export the app for Vercel
+module.exports = app;
+
+// Only start server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+}
