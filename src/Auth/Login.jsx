@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { useNavigate,Link } from 'react-router-dom';
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './Auth.css';

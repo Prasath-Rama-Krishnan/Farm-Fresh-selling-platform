@@ -13,22 +13,24 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key-for-devel
 // In-memory fallback storage for when MongoDB is unavailable
 let inMemoryProducers = [];
 
+// Load environment variables
+require('dotenv').config();
+
 // MongoDB connection with graceful fallback
 const connectDB = async() => {
     try {
-        if (process.env.MONGODB_URI) {
-            await mongoose.connect(process.env.MONGODB_URI, {
-                serverSelectionTimeoutMS: 10000,
-                socketTimeoutMS: 45000,
-                maxPoolSize: 10,
-                minPoolSize: 1,
-            });
-            console.log('✅ MongoDB Atlas connected successfully');
-            return true;
-        } else {
-            console.log('⚠️ No MongoDB URI - using in-memory storage');
-            return false;
-        }
+        // Use local MongoDB by default if no URI is provided
+        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fertilizer-site';
+        
+        await mongoose.connect(mongoUri, {
+            serverSelectionTimeoutMS: 5000, // 5 seconds timeout
+            socketTimeoutMS: 45000,
+            maxPoolSize: 10,
+            minPoolSize: 1,
+        });
+        
+        console.log(`✅ Connected to MongoDB at ${mongoUri}`);
+        return true;
     } catch (error) {
         console.error('❌ MongoDB connection failed:', error.message);
         console.log('🔄 Falling back to in-memory storage');
@@ -43,13 +45,13 @@ connectDB().then(connected => {
     isMongoConnected = connected;
 });
 
-// CORS configuration for Vercel
+// CORS configuration
 app.use(cors({
     origin: [
-        'https://farm-fresh-selling-platform.vercel.app',
-        'https://avfarm.vercel.app',
         'http://localhost:5173',
-        'http://localhost:3000'
+        'http://localhost:3000',
+        'http://localhost:5174',
+        'https://farm-fresh-selling-platform.vercel.app'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -310,9 +312,14 @@ app.use('/api/*', (req, res) => {
 // Export the app for Vercel
 module.exports = app;
 
-// Only start server if not in Vercel environment
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(port, () => {
-        console.log(`Server is running on port ${port}`);
-    });
-}
+// Start the server
+const server = app.listen(port, '0.0.0.0', () => {
+    console.log(`Server is running on http://localhost:${port}`);    
+}).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${port} is already in use. Please stop any other servers using this port.`);
+    } else {
+        console.error('Failed to start server:', err);
+    }
+    process.exit(1);
+});
