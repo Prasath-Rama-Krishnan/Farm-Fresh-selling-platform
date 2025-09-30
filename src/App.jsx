@@ -12,18 +12,6 @@ function App(){
     });
   };
 
-  const testAPI = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/health`);
-      const data = await response.json();
-      console.log('API Health Check:', data);
-      alert(`API Status: ${data.status}\nMessage: ${data.message}\nMongoDB: ${data.mongoConnected ? 'Connected' : 'Not Connected'}`);
-    } catch (error) {
-      console.error('API Test Failed:', error);
-      alert(`API Test Failed: ${error.message}`);
-    }
-  };
-
   return(
 <>
     <div> 
@@ -45,21 +33,6 @@ function App(){
         <p>We aim to bridge the gap between farmers and consumers by providing an easy-to-use platform for direct sales</p>
     <center> <button onClick={handlescrolldown}>see more</button></center> 
     </div>  
-      </div>
-      <div style={{ textAlign: 'center', margin: '20px 0' }}>
-        <button 
-          onClick={testAPI} 
-          style={{
-            background: '#27ae60',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Test API Connection
-        </button>
       </div>
     </div>
     <div className="card-container">

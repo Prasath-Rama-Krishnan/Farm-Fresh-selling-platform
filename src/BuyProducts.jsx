@@ -3,6 +3,7 @@ import axios from 'axios';
 import './Consumer.css';
 import API_BASE_URL from './config/api.js';
 import { useAuth } from './context/AuthContext';
+import Header from './Header.jsx';
 
 const BuyProducts = () => {
     const { user } = useAuth();

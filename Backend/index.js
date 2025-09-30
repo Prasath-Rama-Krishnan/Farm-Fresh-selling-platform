@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-
+const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const Producer = require('./producerdb');
@@ -16,31 +16,79 @@ let inMemoryProducers = [];
 // Load environment variables
 require('dotenv').config();
 
-// MongoDB connection with graceful fallback
-const connectDB = async() => {
-    try {
-        // Use local MongoDB by default if no URI is provided
-        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fertilizer-site';
-        
-        await mongoose.connect(mongoUri, {
-            serverSelectionTimeoutMS: 5000, // 5 seconds timeout
-            socketTimeoutMS: 45000,
-            maxPoolSize: 10,
-            minPoolSize: 1,
-        });
-        
-        console.log(`✅ Connected to MongoDB at ${mongoUri}`);
+// MongoDB connection with retry logic and better error handling
+const connectDB = async () => {
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+        console.log('✅ Already connected to MongoDB');
         return true;
-    } catch (error) {
-        console.error('❌ MongoDB connection failed:', error.message);
-        console.log('🔄 Falling back to in-memory storage');
-        return false;
     }
+    
+    // Close any existing connections
+    if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+    }
+    
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+        try {
+            const mongoUri = process.env.MONGODB_URI;
+            if (!mongoUri) {
+                throw new Error('MongoDB URI is not defined in environment variables');
+            }
+            
+            console.log(`🔌 Attempting to connect to MongoDB (Attempt ${retryCount + 1}/${maxRetries})...`);
+            
+            await mongoose.connect(mongoUri, {
+                serverSelectionTimeoutMS: 10000,
+                socketTimeoutMS: 45000,
+                connectTimeoutMS: 10000,
+            });
+            
+            console.log('✅ Successfully connected to MongoDB!');
+            return true;
+            
+        } catch (error) {
+            retryCount++;
+            console.error(`❌ MongoDB connection attempt ${retryCount} failed:`, error.message);
+            
+            if (retryCount === maxRetries) {
+                console.error('❌ Max retries reached. Running in fallback mode without MongoDB.');
+                console.log('ℹ️ To fix MongoDB connection:');
+                console.log('1. Go to https://cloud.mongodb.com/');
+                console.log('2. Create a new FREE cluster (M0)');
+                console.log('3. Add your IP to Network Access (or use 0.0.0.0/0)');
+                console.log('4. Create a database user');
+                console.log('5. Get connection string and update .env file');
+                return false;
+            }
+            
+            // Wait before retrying
+            const delay = 2000;
+            console.log(`⏳ Retrying in ${delay/1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    return false;
 };
 
-// Check if MongoDB is available
+// Check MongoDB connection status
 let isMongoConnected = false;
 
+// Handle connection events
+mongoose.connection.on('error', err => {
+    console.error('MongoDB connection error:', err);
+    isMongoConnected = false;
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB disconnected');
+    isMongoConnected = false;
+});
+
+// Initialize connection
 connectDB().then(connected => {
     isMongoConnected = connected;
 });
@@ -82,88 +130,144 @@ function findUserByEmail(email) {
 }
 
 // Helper function to create or update user
-function createOrUpdateUser(email, password = null, googleId = null, name = null) {
-    let user = findUserByEmail(email);
+async function createOrUpdateUser(email, password = null, googleId = null, name = null) {
+    try {
+        // Find existing user
+        let user = users.find(u => u.email === email);
+        
+        if (user) {
+            // Update existing user
+            if (password) {
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(password, salt);
+            }
+            if (googleId) user.googleId = googleId;
+            if (name) user.name = name;
+            return user;
+        } else {
+            // Create new user
+            const newUser = {
+                id: (users.length + 1).toString(),
+                email,
+                password: null,
+                googleId,
+                name: name || email.split('@')[0],
+                authMethods: [],
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
 
-    if (user) {
-        // Update existing user
-        if (password) user.password = password;
-        if (googleId) user.googleId = googleId;
-        if (name) user.name = name;
-        return user;
-    } else {
-        // Create new user
-        const newUser = {
-            id: Date.now().toString(),
-            email,
-            password,
-            googleId,
-            name: name || email.split('@')[0],
-            authMethods: []
-        };
+            if (password) {
+                const salt = await bcrypt.genSalt(10);
+                newUser.password = await bcrypt.hash(password, salt);
+                newUser.authMethods.push('password');
+            }
+            if (googleId) newUser.authMethods.push('google');
 
-        if (password) newUser.authMethods.push('password');
-        if (googleId) newUser.authMethods.push('google');
-
-        users.push(newUser);
-        return newUser;
+            users.push(newUser);
+            return newUser;
+        }
+    } catch (error) {
+        console.error('Error in createOrUpdateUser:', error);
+        throw error;
     }
 }
 
-app.post('/register', async(req, res) => {
-    const { email, password } = req.body;
+app.post('/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = findUserByEmail(email);
-    if (existingUser) {
-        if (existingUser.authMethods.includes('password')) {
-            return res.status(400).json({ message: 'User already exists with password authentication' });
-        } else {
-            // User exists with Google only, add password method
-            existingUser.password = password;
-            existingUser.authMethods.push('password');
-            return res.status(200).json({
-                message: 'Password added to existing Google account!',
-                userId: existingUser.id
-            });
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
         }
-    }
 
-    // Create new user with password
-    const newUser = createOrUpdateUser(email, password);
-    res.status(201).json({ message: 'User registered successfully!', userId: newUser.id });
+        // Check if user already exists
+        const existingUser = findUserByEmail(email);
+        if (existingUser) {
+            if (existingUser.authMethods.includes('password')) {
+                return res.status(400).json({ message: 'User already exists with password authentication' });
+            } else {
+                // User exists with Google only, add password method
+                const salt = await bcrypt.genSalt(10);
+                existingUser.password = await bcrypt.hash(password, salt);
+                existingUser.authMethods.push('password');
+                existingUser.updatedAt = new Date();
+                
+                return res.status(200).json({
+                    message: 'Password added to existing Google account!',
+                    userId: existingUser.id
+                });
+            }
+        }
+
+        // Create new user with password
+        const newUser = await createOrUpdateUser(email, password);
+        res.status(201).json({ 
+            message: 'User registered successfully!', 
+            userId: newUser.id 
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Error registering user', error: error.message });
+    }
 });
 
-app.post('/login', async(req, res) => {
-    const { email, password } = req.body;
+app.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-    // Find user
-    const user = findUserByEmail(email);
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
 
-    if (user && user.password === password) {
-        // Generate JWT token
-        const token = jwt.sign({ userId: user.id, email: user.email },
-            JWT_SECRET, { expiresIn: '24h' }
-        );
+        // Find user
+        const user = findUserByEmail(email);
+        
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
 
-        res.status(200).json({
-            message: 'Login successful!',
-            token: token,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                authMethods: user.authMethods
-            }
-        });
-    } else if (user && !user.password) {
-        res.status(400).json({
-            message: 'This email is registered with Google Sign-In only. Please sign in with Google or set a password.',
-            needsPassword: true,
-            userId: user.id
-        });
-    } else {
-        res.status(401).json({ message: 'Invalid credentials' });
+        // Check password
+        const isPasswordValid = user.password && await bcrypt.compare(password, user.password);
+
+        if (isPasswordValid) {
+            // Generate JWT token
+            const token = jwt.sign(
+                { 
+                    userId: user.id, 
+                    email: user.email 
+                },
+                JWT_SECRET, 
+                { 
+                    expiresIn: '24h' 
+                }
+            );
+
+            // Update last login time
+            user.lastLogin = new Date();
+
+            return res.status(200).json({
+                message: 'Login successful!',
+                token: token,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    authMethods: user.authMethods
+                }
+            });
+        } else if (user && !user.password) {
+            return res.status(400).json({
+                message: 'This email is registered with Google Sign-In only. Please sign in with Google or set a password.',
+                needsPassword: true,
+                userId: user.id
+            });
+        } else {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Error during login', error: error.message });
     }
 });
 

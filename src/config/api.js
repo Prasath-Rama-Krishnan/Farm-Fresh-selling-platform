@@ -3,7 +3,7 @@ const API_BASE_URL =
     import.meta.env.PROD ?
     '/api' // Vercel serverless functions (relative path)
     :
-    'http://localhost:5172'; // Local development
+    'http://localhost:3000'; // Local development
 
 // Fallback to relative path if the full URL doesn't work
 const FALLBACK_API_URL = '/api';

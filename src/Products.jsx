@@ -56,11 +56,27 @@ const Products = () => {
           <div className="todo-container">
             {filteredTodoList.map((item) => (
               <div key={item._id} style={{ marginBottom: "10px" }} className="items">
+                <div style={{textAlign: 'center', marginBottom: '10px'}}>
+                  <h4 style={{color: '#2c7873', margin: '0 0 5px 0', fontSize: '1.2em'}}>
+                    {item.productName || item.variety}
+                  </h4>
+                  {item.price && (
+                    <div style={{color: '#4a9d96', fontWeight: 'bold', fontSize: '1.1em'}}>
+                      ₹{item.price}/kg
+                    </div>
+                  )}
+                </div>
                 <p>
                   <span>Producer:</span> {item.name} <br />
                   <span>Contact:</span> {item.number} <br />
                   <span>Location:</span> {item.address} <br />
-                  <span>Product:</span> {item.variety} <br />
+                  <span>Category:</span> {item.variety} <br />
+                  {item.quantity && (
+                    <><span>Available:</span> {item.quantity} kg <br /></>
+                  )}
+                  {item.description && (
+                    <><span>Description:</span> {item.description} <br /></>
+                  )}
                 </p>
               </div>
             ))}
